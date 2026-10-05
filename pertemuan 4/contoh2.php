@@ -1,91 +1,92 @@
 <?php
+// Koneksi ke Database
+$host = '127.0.0.1';
+$user = 'root';
+$password = '';
 
-require_once 'koneksi.php';
+$koneksi = mysqli_connect($host, $user, $password);
 
-$sqlcreatDB = "CREATE DATABASE IF NOT EXISTS akademik";
-
-if (mysqli_query($koneksi, $sqlcreatDB)) {
-    echo "Database berhasil dibuat atau sudah ada.<br>";
-} else {
-    echo "Error membuat database: " . mysqli_error($koneksi) . "<br>";
+if (!$koneksi) {
+    die("Koneksi gagal: " . mysqli_connect_error());
 }
+echo "Koneksi ke server MySQL berhasil!\n";
 
-mysqli_set_charset($koneksi, "utf8mb4");
-
+// Pilih database
 mysqli_select_db($koneksi, 'akademik');
 
-$sqlCreateTables = [
-    "mahasiswa" => "CREATE TABLE IF NOT EXISTS mahasiswa (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        nim VARCHAR(15) NOT NULL UNIQUE,
-        nama VARCHAR(100) NOT NULL,
-        email VARCHAR(120) NOT NULL UNIQUE,
-        prodi VARCHAR(80) NOT NULL,
-        angkatan YEAR NOT NULL,
-        ipk DECIMAL(3,2) DEFAULT 0.00
-    ) ENGINE=InnoDB",
+// ==============================================
+// 1. PROSES UPDATE DATA IPK
+// ==============================================
+echo "\n=== 1. PROSES UPDATE DATA ===\n";
+$sqlUpdate = "UPDATE mahasiswa 
+              SET ipk = 3.40 
+              WHERE nim = '2025003'";
 
-    "dosen" => "CREATE TABLE IF NOT EXISTS dosen (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        nidn VARCHAR(20) NOT NULL UNIQUE,
-        nama VARCHAR(100) NOT NULL,
-        email VARCHAR(120) NOT NULL UNIQUE
-    ) ENGINE=InnoDB",
-
-    "mata_kuliah" => "CREATE TABLE IF NOT EXISTS mata_kuliah (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        kode_mk VARCHAR(12) NOT NULL UNIQUE,
-        nama_mk VARCHAR(100) NOT NULL,
-        sks TINYINT UNSIGNED,
-        dosen_id BIGINT UNSIGNED NULL,
-        CONSTRAINT fk_mk_dosen
-            FOREIGN KEY (dosen_id) REFERENCES dosen(id)
-            ON UPDATE CASCADE
-            ON DELETE SET NULL
-    ) ENGINE=InnoDB",
-
-    "CREATE TABLE IF NOT EXISTS krs (
-    id BIGINT
-    UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    mahasiswa_id BIGINT UNSIGNED
-    NOT NULL,
-    semester TINYINT UNSIGNED
-    NOT NULL,
-    tahun_ajaran VARCHAR(9) NOT NULL,
-    CONSTRAINT uq_krs UNIQUE
-    (mahasiswa_id, semester, tahun_ajaran),
-    CONSTRAINT fk_krs_mahasiswa
-    FOREIGN KEY (mahasiswa_id)
-    REFERENCES mahasiswa(id)
-    ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB",
-
-"CREATE TABLE IF NOT EXISTS mk_krs (
-    id BIGINT
-    UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    krs_id BIGINT UNSIGNED NOT NULL,
-    mata_kuliah_id BIGINT UNSIGNED
-    NOT NULL,
-    CONSTRAINT fk_mkkrs_krs
-    FOREIGN KEY (krs_id) REFERENCES
-    krs(id) ON UPDATE CASCADE
-    ON DELETE CASCADE,
-    CONSTRAINT fk_mkkrs_mk
-    FOREIGN KEY (mata_kuliah_id)
-    REFERENCES mata_kuliah(id)
-    ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB"
-];
-
-foreach ($sqlCreateTables as $namaTabel => $query) {
-    if (mysqli_query($koneksi, $query)) {
-        echo "Tabel <b>$namaTabel</b> berhasil dibuat atau sudah ada. \n";
-    } else {
-        echo "Gagal membuat tabel: "
-            . mysqli_error($koneksi) . "\n";
-    }
+if (mysqli_query($koneksi, $sqlUpdate)) {
+    echo "Data IPK mahasiswa dengan NIM 2025003 berhasil diubah menjadi 3.40.\n\n";
+} else {
+    echo "Gagal UPDATE: " . mysqli_error($koneksi) . "\n\n";
 }
 
-mysqli_close($koneksi);
+// ==============================================
+// 2. REKAP DENGAN GROUP BY
+// ==============================================
+echo "=== 2. REKAP MAHASISWA PER PRODI ===\n";
+$sqlRekap = "SELECT prodi, 
+                    COUNT(*) AS jumlah, 
+                    ROUND(AVG(ipk), 2) AS rata_ipk
+             FROM mahasiswa
+             GROUP BY prodi
+             ORDER BY jumlah DESC";
 
+$resultRekap = mysqli_query($koneksi, $sqlRekap);
+
+if (mysqli_num_rows($resultRekap) > 0) {
+    while ($row = mysqli_fetch_assoc($resultRekap)) {
+        echo "Prodi    : " . $row["prodi"] . "\n";
+        echo "Jumlah   : " . $row["jumlah"] . " Mahasiswa\n";
+        echo "Rata-rata IPK : " . $row["rata_ipk"] . "\n";
+        echo "------------------------------------\n";
+    }
+} else {
+    echo "Belum ada data rekap prodi.\n";
+}
+echo "\n";
+
+// ==============================================
+// 3. VERIFIKASI SEBELUM PENGHAPUSAN
+// ==============================================
+echo "=== 3. VERIFIKASI DATA (NIM 2025003) ===\n";
+$sqlVerifikasi = "SELECT * 
+                  FROM mahasiswa 
+                  WHERE nim = '2025003'";
+
+$resultVerifikasi = mysqli_query($koneksi, $sqlVerifikasi);
+
+if (mysqli_num_rows($resultVerifikasi) > 0) {
+    $row = mysqli_fetch_assoc($resultVerifikasi);
+    echo "Data Ditemukan!\n";
+    echo "NIM  : " . $row["nim"] . "\n";
+    echo "Nama : " . $row["nama"] . "\n";
+    echo "IPK  : " . $row["ipk"] . "\n\n";
+
+    // ==========================================
+    // 4. PROSES DELETE
+    // ==========================================
+    echo "=== 4. PROSES HAPUS DATA ===\n";
+    $sqlDelete = "DELETE FROM mahasiswa 
+                  WHERE nim = '2025003'";
+
+    if (mysqli_query($koneksi, $sqlDelete)) {
+        echo "[SUKSES] Data mahasiswa NIM 2025003 berhasil dihapus dari database.\n";
+    } else {
+        echo "[ERROR] Gagal menghapus data: " . mysqli_error($koneksi) . "\n";
+    }
+} else {
+    echo "Data mahasiswa dengan NIM 2025003 TIDAK DITEMUKAN (Mungkin sudah dihapus sebelumnya).\n";
+}
+
+// Tutup koneksi
+mysqli_close($koneksi);
 ?>
+

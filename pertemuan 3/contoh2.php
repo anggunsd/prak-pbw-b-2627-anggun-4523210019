@@ -16,13 +16,15 @@ mysqli_select_db($koneksi, 'akademik');
 
 $sqlCreateTables = [
     "mahasiswa" => "CREATE TABLE IF NOT EXISTS mahasiswa (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        nim VARCHAR(15) NOT NULL UNIQUE,
-        nama VARCHAR(100) NOT NULL,
-        email VARCHAR(120) NOT NULL UNIQUE,
-        prodi VARCHAR(80) NOT NULL,
-        angkatan YEAR NOT NULL,
-        ipk DECIMAL(3,2) DEFAULT 0.00
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nim VARCHAR(15) NOT NULL UNIQUE,
+    nama VARCHAR(100) NOT NULL,
+    email VARCHAR(120) NOT NULL UNIQUE,
+    no_hp VARCHAR(15) NOT NULL,
+    prodi VARCHAR(80) NOT NULL,
+    angkatan YEAR NOT NULL,
+    ipk DECIMAL(3,2) DEFAULT 0.00,
+    status ENUM('Aktif', 'Cuti', 'Lulus') DEFAULT 'Aktif'
     ) ENGINE=InnoDB",
 
     "dosen" => "CREATE TABLE IF NOT EXISTS dosen (
